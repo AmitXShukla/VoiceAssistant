@@ -1,10 +1,10 @@
-# ⚡ Atlas — Complete Local Voice AI Assistant
+# ⚡ Jarvis — Complete Local Voice AI Assistant
 
 A fully offline voice assistant that runs entirely on your NVIDIA GPU.
 No cloud, no API keys, no subscriptions.
 
 ```
-Say "Hey Atlas"  →  speak your request  →  Atlas responds in your voice
+Say "Hey Jarvis"  →  speak your request  →  Jarvis responds in your voice
 ```
 
 ---
