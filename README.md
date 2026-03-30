@@ -7,6 +7,12 @@ No cloud, no API keys, no subscriptions.
 Say "Hey Jarvis"  →  speak your request  →  Jarvis responds in your voice
 ```
 
+name your AI Atlas ~
+
+```
+Say "Hey Atlas"  →  speak your request  →  Atlas responds in your voice
+```
+
 ---
 
 ## Architecture
