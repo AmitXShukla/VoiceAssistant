@@ -1,0 +1,480 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Atlas — Voice Assistant</title>
+<style>
+  :root {
+    --bg: #0d0f14;
+    --surface: #161a22;
+    --surface2: #1e2330;
+    --border: #2a3040;
+    --accent: #4f8ef7;
+    --accent2: #7c5ce8;
+    --success: #00c97a;
+    --warning: #f59f00;
+    --error: #ff5c5c;
+    --text: #e8ecf0;
+    --muted: #7a8499;
+    --font: 'Inter', system-ui, sans-serif;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--font);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+  }
+  header {
+    padding: 20px 32px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    border-bottom: 1px solid var(--border);
+    background: var(--surface);
+  }
+  .logo {
+    font-size: 22px;
+    font-weight: 700;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    letter-spacing: -0.5px;
+  }
+  .status-badge {
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 14px;
+    border-radius: 20px;
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    transition: all 0.3s ease;
+    border: 1px solid var(--border);
+  }
+  .status-dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    animation: pulse 2s infinite;
+  }
+  @keyframes pulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.6; transform: scale(1.2); }
+  }
+  .state-IDLE .status-dot { background: var(--muted); animation: none; }
+  .state-LISTENING .status-dot { background: var(--success); }
+  .state-TRANSCRIBING .status-dot { background: var(--warning); }
+  .state-THINKING .status-dot { background: var(--accent); }
+  .state-SPEAKING .status-dot { background: var(--accent2); }
+  .state-ERROR .status-dot { background: var(--error); animation: none; }
+
+  .main { display: grid; grid-template-columns: 1fr 340px; gap: 0; flex: 1; }
+
+  /* Chat panel */
+  .chat-panel {
+    display: flex; flex-direction: column;
+    border-right: 1px solid var(--border);
+  }
+  .chat-header {
+    padding: 16px 24px;
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: var(--muted);
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .chat-messages {
+    flex: 1;
+    overflow-y: auto;
+    padding: 20px 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+  .message {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    max-width: 85%;
+    animation: fadeIn 0.3s ease;
+  }
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+  .message.user { align-self: flex-end; align-items: flex-end; }
+  .message.assistant { align-self: flex-start; align-items: flex-start; }
+  .bubble {
+    padding: 11px 16px;
+    border-radius: 16px;
+    font-size: 14px;
+    line-height: 1.5;
+  }
+  .user .bubble {
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    color: white;
+    border-bottom-right-radius: 4px;
+  }
+  .assistant .bubble {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-bottom-left-radius: 4px;
+  }
+  .msg-time {
+    font-size: 11px;
+    color: var(--muted);
+    padding: 0 4px;
+  }
+  .clear-btn {
+    background: none;
+    border: 1px solid var(--border);
+    color: var(--muted);
+    padding: 4px 10px;
+    border-radius: 6px;
+    font-size: 11px;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .clear-btn:hover { border-color: var(--error); color: var(--error); }
+
+  /* Sidebar */
+  .sidebar {
+    display: flex; flex-direction: column;
+    background: var(--surface);
+  }
+
+  .widget {
+    padding: 20px;
+    border-bottom: 1px solid var(--border);
+  }
+  .widget-title {
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: var(--muted);
+    margin-bottom: 14px;
+  }
+
+  /* Orb visualiser */
+  .orb-container {
+    display: flex;
+    justify-content: center;
+    padding: 10px 0 4px;
+  }
+  .orb {
+    width: 80px; height: 80px;
+    border-radius: 50%;
+    background: radial-gradient(circle at 35% 35%, #4f8ef7, #7c5ce8);
+    box-shadow: 0 0 30px rgba(79,142,247,0.3);
+    transition: all 0.4s ease;
+    position: relative;
+    overflow: hidden;
+  }
+  .orb::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: 50%;
+    background: radial-gradient(circle at 60% 60%, rgba(255,255,255,0.15), transparent);
+  }
+  .orb.listening {
+    box-shadow: 0 0 50px rgba(0,201,122,0.5);
+    background: radial-gradient(circle at 35% 35%, #00c97a, #00a865);
+    animation: orbPulse 1s infinite;
+  }
+  .orb.thinking {
+    box-shadow: 0 0 50px rgba(79,142,247,0.6);
+    animation: orbSpin 2s linear infinite;
+  }
+  .orb.speaking {
+    box-shadow: 0 0 50px rgba(124,92,232,0.6);
+    animation: orbBounce 0.5s ease-in-out infinite alternate;
+  }
+  @keyframes orbPulse {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.08); }
+  }
+  @keyframes orbSpin {
+    from { filter: hue-rotate(0deg); }
+    to { filter: hue-rotate(360deg); }
+  }
+  @keyframes orbBounce {
+    from { transform: scaleY(0.92); }
+    to { transform: scaleY(1.08); }
+  }
+
+  .state-label {
+    text-align: center;
+    font-size: 12px;
+    color: var(--muted);
+    margin-top: 10px;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+  }
+
+  /* Stats */
+  .stats-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+  }
+  .stat-card {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 12px;
+    text-align: center;
+  }
+  .stat-value {
+    font-size: 24px;
+    font-weight: 700;
+    color: var(--accent);
+  }
+  .stat-label {
+    font-size: 11px;
+    color: var(--muted);
+    margin-top: 2px;
+  }
+
+  /* Reminders */
+  .reminder-list {
+    display: flex; flex-direction: column; gap: 8px;
+    max-height: 160px; overflow-y: auto;
+  }
+  .reminder-item {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 10px 12px;
+    font-size: 13px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 8px;
+  }
+  .reminder-time { color: var(--accent); font-size: 11px; font-weight: 600; white-space: nowrap; }
+  .no-data { color: var(--muted); font-size: 13px; font-style: italic; }
+
+  /* Notification toast */
+  .toast {
+    position: fixed;
+    bottom: 24px; right: 24px;
+    background: var(--surface2);
+    border: 1px solid var(--accent);
+    border-radius: 12px;
+    padding: 14px 20px;
+    font-size: 14px;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+    transform: translateY(100px);
+    opacity: 0;
+    transition: all 0.3s ease;
+    z-index: 1000;
+    max-width: 320px;
+  }
+  .toast.show { transform: translateY(0); opacity: 1; }
+  .toast-title { font-weight: 700; color: var(--accent); margin-bottom: 4px; }
+
+  /* Scrollbar */
+  ::-webkit-scrollbar { width: 4px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">⚡ Atlas</div>
+  <div class="status-badge state-IDLE" id="statusBadge">
+    <div class="status-dot"></div>
+    <span id="statusText">IDLE</span>
+  </div>
+</header>
+
+<div class="main">
+  <div class="chat-panel">
+    <div class="chat-header">
+      Conversation
+      <button class="clear-btn" onclick="clearHistory()">Clear history</button>
+    </div>
+    <div class="chat-messages" id="chatMessages">
+      <div class="no-data" style="margin:auto;text-align:center;padding:40px 0">
+        Say <strong>"Hey Atlas"</strong> to start a conversation
+      </div>
+    </div>
+  </div>
+
+  <div class="sidebar">
+    <div class="widget">
+      <div class="widget-title">Status</div>
+      <div class="orb-container">
+        <div class="orb" id="orb"></div>
+      </div>
+      <div class="state-label" id="orbLabel">Waiting for wake word…</div>
+    </div>
+
+    <div class="widget">
+      <div class="widget-title">Stats</div>
+      <div class="stats-grid">
+        <div class="stat-card">
+          <div class="stat-value" id="statMessages">—</div>
+          <div class="stat-label">Messages</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value" id="statReminders">—</div>
+          <div class="stat-label">Reminders</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="widget" style="flex:1">
+      <div class="widget-title">Active Reminders</div>
+      <div class="reminder-list" id="reminderList">
+        <div class="no-data">No active reminders</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast">
+  <div class="toast-title">⏰ Reminder</div>
+  <div id="toastText"></div>
+</div>
+
+<script>
+  const WS_URL = `ws://${location.host}/ws`;
+  let ws, pingInterval;
+
+  function connect() {
+    ws = new WebSocket(WS_URL);
+
+    ws.onopen = () => {
+      console.log('WS connected');
+      pingInterval = setInterval(() => ws.readyState === 1 && ws.send('ping'), 20000);
+    };
+
+    ws.onmessage = ({ data }) => {
+      const msg = JSON.parse(data);
+      if (msg.type === 'state') handleState(msg);
+      else if (msg.type === 'reminder') showReminder(msg.text);
+    };
+
+    ws.onclose = () => {
+      clearInterval(pingInterval);
+      setTimeout(connect, 2000);
+    };
+  }
+
+  const STATE_META = {
+    IDLE:          { label: 'Waiting for wake word…', orb: '',          badge: 'IDLE' },
+    LISTENING:     { label: 'Listening…',             orb: 'listening', badge: 'LISTENING' },
+    TRANSCRIBING:  { label: 'Transcribing…',          orb: 'thinking',  badge: 'TRANSCRIBING' },
+    THINKING:      { label: 'Thinking…',              orb: 'thinking',  badge: 'THINKING' },
+    SPEAKING:      { label: 'Speaking…',              orb: 'speaking',  badge: 'SPEAKING' },
+    ERROR:         { label: 'Error — try again',       orb: '',          badge: 'ERROR' },
+  };
+
+  function handleState({ state, text }) {
+    const meta = STATE_META[state] || STATE_META.IDLE;
+    const badge = document.getElementById('statusBadge');
+    const statusText = document.getElementById('statusText');
+    const orb = document.getElementById('orb');
+    const orbLabel = document.getElementById('orbLabel');
+
+    badge.className = `status-badge state-${state}`;
+    statusText.textContent = meta.badge;
+    orb.className = `orb ${meta.orb}`;
+    orbLabel.textContent = meta.label;
+
+    // Add message to chat if there's text
+    if (text && (state === 'TRANSCRIBING' || state === 'THINKING')) {
+      const role = state === 'TRANSCRIBING' ? 'user' : 'assistant';
+      addMessage(role, text, new Date());
+    }
+  }
+
+  function addMessage(role, content, date) {
+    const container = document.getElementById('chatMessages');
+    const placeholder = container.querySelector('.no-data');
+    if (placeholder) placeholder.remove();
+
+    const time = date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    const div = document.createElement('div');
+    div.className = `message ${role}`;
+    div.innerHTML = `
+      <div class="bubble">${escHtml(content)}</div>
+      <div class="msg-time">${time}</div>
+    `;
+    container.appendChild(div);
+    container.scrollTop = container.scrollHeight;
+  }
+
+  function escHtml(s) {
+    return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  }
+
+  function showReminder(text) {
+    const toast = document.getElementById('toast');
+    document.getElementById('toastText').textContent = text;
+    toast.classList.add('show');
+    setTimeout(() => toast.classList.remove('show'), 6000);
+  }
+
+  async function clearHistory() {
+    await fetch('/api/clear', { method: 'POST' });
+    document.getElementById('chatMessages').innerHTML =
+      '<div class="no-data" style="margin:auto;text-align:center;padding:40px 0">History cleared</div>';
+    loadStats();
+  }
+
+  async function loadHistory() {
+    const res = await fetch('/api/history');
+    const msgs = await res.json();
+    if (!msgs.length) return;
+    const container = document.getElementById('chatMessages');
+    container.innerHTML = '';
+    msgs.forEach(m => addMessage(m.role, m.content, new Date(m.ts * 1000)));
+  }
+
+  async function loadStats() {
+    const res = await fetch('/api/stats');
+    const s = await res.json();
+    document.getElementById('statMessages').textContent = s.total_messages ?? '0';
+    document.getElementById('statReminders').textContent = s.active_reminders ?? '0';
+  }
+
+  async function loadReminders() {
+    const res = await fetch('/api/reminders');
+    const reminders = await res.json();
+    const list = document.getElementById('reminderList');
+    if (!reminders.length) {
+      list.innerHTML = '<div class="no-data">No active reminders</div>';
+      return;
+    }
+    list.innerHTML = reminders.map(r => {
+      const remaining = Math.max(0, Math.round(r.due_ts - Date.now() / 1000));
+      const t = remaining < 60 ? `${remaining}s` : remaining < 3600 ? `${Math.round(remaining/60)}m` : `${Math.round(remaining/3600)}h`;
+      return `<div class="reminder-item">
+        <span>${escHtml(r.text)}</span>
+        <span class="reminder-time">in ${t}</span>
+      </div>`;
+    }).join('');
+    document.getElementById('statReminders').textContent = reminders.length;
+  }
+
+  // Boot
+  connect();
+  loadHistory();
+  loadStats();
+  loadReminders();
+  setInterval(loadReminders, 15000);
+  setInterval(loadStats, 30000);
+</script>
+</body>
+</html>

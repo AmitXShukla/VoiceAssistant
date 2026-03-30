@@ -1,0 +1,59 @@
+# ══════════════════════════════════════════════════════════════
+# Atlas Voice Assistant — Python 3.12 Requirements
+# ══════════════════════════════════════════════════════════════
+#
+# STEP 1 — Install PyTorch with CUDA FIRST (adjust cu121 to match your driver):
+#   pip install torch torchaudio --index-url https://download.pytorch.org/whl/cu121
+#
+# STEP 2 — Install everything else:
+#   pip install -r requirements.txt
+#
+# STEP 3 (one-time) — Train custom wake word:
+#   pip install "openwakeword[training]"
+#   python main.py --setup-wake-word
+# ══════════════════════════════════════════════════════════════
+
+# ── Core audio ────────────────────────────────────────────────
+sounddevice>=0.4.6
+scipy>=1.12.0
+numpy>=1.26.0          # NumPy 2.x works with Python 3.12
+
+# ── STT ───────────────────────────────────────────────────────
+faster-whisper>=1.0.0
+
+# ── Wake word ─────────────────────────────────────────────────
+openwakeword>=0.6.0 # or just openwakeword (latest)
+# onnxruntime-gpu>=1.17.0    # GPU inference for OpenWakeWord
+onnxruntime>=1.17.0    # GPU inference for OpenWakeWord
+                            # CPU-only alternative: onnxruntime>=1.17.0
+
+# ── TTS — Coqui XTTS-v2 (recommended) ────────────────────────
+# TTS>=0.22.0
+coqui-tts
+
+# ── TTS — RVC pipeline (only if using --tts rvc) ─────────────
+# edge-tts>=6.1.9
+# rvc-python>=0.1.0
+
+# ── LLM ───────────────────────────────────────────────────────
+requests>=2.31.0
+
+# ── Noise suppression ─────────────────────────────────────────
+noisereduce>=3.0.0
+
+# ── DeepFilterNet (optional, better noise reduction) ──────────
+# pip install deepfilternet    (separate step — large dependency)
+
+# ── Tools ─────────────────────────────────────────────────────
+duckduckgo-search>=6.1.0
+
+# ── Web UI ────────────────────────────────────────────────────
+fastapi>=0.110.0
+uvicorn[standard]>=0.29.0
+websockets>=12.0
+
+# ── Silero VAD — two installation options ─────────────────────
+# Option A (recommended, cleaner):
+#   pip install silero-vad
+# Option B (automatic via torch.hub — no extra install needed):
+#   The model is downloaded automatically on first run.
